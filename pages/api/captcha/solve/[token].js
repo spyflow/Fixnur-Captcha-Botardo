@@ -2,7 +2,7 @@ import { supabase } from '../../../../lib/supabaseClient'
 import { createHmac, timingSafeEqual } from 'crypto'
 
 export default async function handler(req, res) {
-	const { token } = req.query
+
 
 	if (req.method !== 'POST') {
 		res.setHeader('Allow', 'POST')
@@ -11,10 +11,15 @@ export default async function handler(req, res) {
 
 	res.setHeader('Cache-Control', 'no-store')
 
+
 		const { recaptchaToken } = req.body || {}
-	if (!recaptchaToken) {
-		return res.status(400).json({ error: 'Missing recaptchaToken' })
-	}
+		const token = req.query.token
+		if (!token || typeof token !== 'string') {
+			return res.status(400).json({ error: 'Missing token in query' })
+		}
+		if (!recaptchaToken) {
+			return res.status(400).json({ error: 'Missing recaptchaToken' })
+		}
 
 	const secret = process.env.RECAPTCHA_SECRET_KEY
 	if (!secret) {

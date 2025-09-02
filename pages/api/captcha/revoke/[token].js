@@ -5,7 +5,7 @@ export default async function handler(req, res) {
 		res.setHeader('Allow', 'POST')
 		return res.status(405).json({ error: 'Method Not Allowed' })
 	}
-	const { token } = req.body || {}
+	const token = req.query.token
 	if (!token || typeof token !== 'string') {
 		return res.status(400).json({ error: 'Missing token' })
 	}
