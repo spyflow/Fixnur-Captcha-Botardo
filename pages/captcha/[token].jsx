@@ -81,11 +81,10 @@ export default function CaptchaPage({ token, siteKey, successmsg }) {
           ) : (
             <div style={{ height: 78, background: '#fafafa', border: '1px solid #eee' }} />
           )}
-          <p style={{ marginTop: 16 }}>
-            {status === 'solved'
-              ? (successmsg || '¡Captcha completado!')
-              : <>Estado: {status}{error ? ` — ${error}` : ''}</>}
-          </p>
+          {successmsg
+            ? (status === 'solved' && <p style={{ marginTop: 16 }}>{successmsg}</p>)
+            : <p style={{ marginTop: 16 }}>Estado: {status}{error ? ` — ${error}` : ''}</p>
+          }
         </>
       )}
     </main>
