@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 
-export default function CaptchaPage({ token, siteKey }) {
+export default function CaptchaPage({ token, siteKey, successmsg }) {
   const containerRef = useRef(null)
   const [mounted, setMounted] = useState(false)
   const [rendered, setRendered] = useState(false)
@@ -82,8 +82,9 @@ export default function CaptchaPage({ token, siteKey }) {
             <div style={{ height: 78, background: '#fafafa', border: '1px solid #eee' }} />
           )}
           <p style={{ marginTop: 16 }}>
-            Estado: {status}
-            {error ? ` — ${error}` : ''}
+            {status === 'solved'
+              ? (successmsg || '¡Captcha completado!')
+              : <>Estado: {status}{error ? ` — ${error}` : ''}</>}
           </p>
         </>
       )}
@@ -94,6 +95,7 @@ export default function CaptchaPage({ token, siteKey }) {
 export async function getServerSideProps(ctx) {
   const { token } = ctx.params
   const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || null
+  const successmsg = typeof ctx.query.successmsg === 'string' ? ctx.query.successmsg : null
   const hmacSecret = process.env.CAPTCHA_HMAC_SECRET || null
   if (hmacSecret) {
     const ua = ctx.req.headers['user-agent'] || ''
@@ -104,5 +106,5 @@ export async function getServerSideProps(ctx) {
     const cookie = `captcha_csrf=${token}.${sig}; Path=/; HttpOnly; SameSite=Lax; Max-Age=900`
     ctx.res.setHeader('Set-Cookie', cookie)
   }
-  return { props: { token, siteKey } }
+  return { props: { token, siteKey, successmsg } }
 }
