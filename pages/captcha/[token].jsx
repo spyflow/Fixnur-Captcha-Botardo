@@ -42,7 +42,7 @@ export default function CaptchaPage({ token, siteKey }) {
 
     // Load reCAPTCHA script if not present
     if (typeof window !== 'undefined') {
-      if (!document.querySelector('script[src^="https://www.google.com/recaptcha/api.js"')) {
+      if (!document.querySelector('script[src^="https://www.google.com/recaptcha/api.js"]')) {
         const s = document.createElement('script')
         s.src = 'https://www.google.com/recaptcha/api.js?render=explicit'
         s.async = true
@@ -94,5 +94,15 @@ export default function CaptchaPage({ token, siteKey }) {
 export async function getServerSideProps(ctx) {
   const { token } = ctx.params
   const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || null
+  const hmacSecret = process.env.CAPTCHA_HMAC_SECRET || null
+  if (hmacSecret) {
+    const ua = ctx.req.headers['user-agent'] || ''
+    const { createHmac } = await import('crypto')
+    const sig = createHmac('sha256', hmacSecret)
+      .update(`${token}.${ua}`)
+      .digest('hex')
+    const cookie = `captcha_csrf=${token}.${sig}; Path=/; HttpOnly; SameSite=Lax; Max-Age=900`
+    ctx.res.setHeader('Set-Cookie', cookie)
+  }
   return { props: { token, siteKey } }
 }
