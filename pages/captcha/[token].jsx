@@ -170,8 +170,8 @@ export async function getServerSideProps(ctx) {
   // Check token existence via internal API
   let valid = false
   try {
-    const baseUrl = process.env.VERCEL_URL 
-    const existUrl = `${baseUrl}/api/captcha/exist/${encodeURIComponent(token)}`
+    const existUrl = `/api/captcha/exist/${encodeURIComponent(token)}`
+
     console.log('[captcha] exist check start', { token, existUrl })
     const resp = await fetch(existUrl)
     if (resp.ok) {
