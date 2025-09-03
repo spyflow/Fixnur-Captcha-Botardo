@@ -105,7 +105,7 @@ export default async function handler(req, res) {
 
 				const { data: upd, error: updErr } = await supabase
 					.from('captcha_tokens')
-					.update({ solved: true })
+					.update({ solved: true, isUsed: true })
 					.eq('id', row.id)
 					.eq('solved', false)
 					.select('id, solved_at')
