@@ -22,80 +22,40 @@ export default function DocsPage() {
     setLoading(true)
     setError(null)
     try {
-      const resp = await fetch('/api/captcha/generateToken', { method: 'POST' })
+      const resp = await fetch('https://captcha.spyflow.tech/api/captcha/generateToken', { method: 'POST' })
       const data = await resp.json()
       if (!resp.ok) {
         throw new Error(data.error || 'Falló la generación del token')
       }
-      window.location.href = `/captcha/${data.token}?successmsg=Prueba completada con éxito`
+      // Redirect to the production captcha page with the new token
+      window.location.href = `https://captcha.spyflow.tech/captcha/${data.token}?successmsg=Prueba completada con éxito`
     } catch (e) {
       setError(e.message)
       setLoading(false)
     }
   }
 
-  const setupSql = `
--- Habilita la extensión pgcrypto si aún no está habilitada
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
-
--- Crea la tabla para almacenar los tokens de captcha
-CREATE TABLE public.captcha_tokens (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    token TEXT NOT NULL UNIQUE,
-    ip_address INET,
-    user_agent TEXT,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    expires_at TIMESTAMPTZ NOT NULL DEFAULT NOW() + INTERVAL '15 minutes',
-    solved BOOLEAN NOT NULL DEFAULT FALSE,
-    solved_at TIMESTAMPTZ
-);
-
--- Agrega un índice en el token para búsquedas rápidas
-CREATE INDEX idx_captcha_tokens_token ON public.captcha_tokens(token);
-
--- Opcional: Agrega un índice en expires_at para limpiezas eficientes
-CREATE INDEX idx_captcha_tokens_expires_at ON public.captcha_tokens(expires_at);
-
--- Habilita la Seguridad a Nivel de Fila (RLS)
-ALTER TABLE public.captcha_tokens ENABLE ROW LEVEL SECURITY;
-
--- Política: Permite el acceso de lectura pública a los tokens (necesario para la página del captcha)
-CREATE POLICY "Allow public read access to tokens"
-ON public.captcha_tokens FOR SELECT
-USING (true);
-
--- Política: Permite la inserción de nuevos tokens a través de la clave de servicio
-CREATE POLICY "Allow insert for service_role"
-ON public.captcha_tokens FOR INSERT
-WITH CHECK (true);
-
--- Política: Permite la actualización de tokens a través de la clave de servicio
-CREATE POLICY "Allow update for service_role"
-ON public.captcha_tokens FOR UPDATE
-USING (true)
-WITH CHECK (true);
-  `.trim()
-
   const curlExample = `
-curl -X POST "https://<tu-dominio>/api/captcha/generateToken"
+curl -X POST "https://captcha.spyflow.tech/api/captcha/generateToken"
   `.trim()
 
   const fetchExample = `
-fetch('/api/captcha/generateToken', {
+fetch('https://captcha.spyflow.tech/api/captcha/generateToken', {
   method: 'POST'
 })
 .then(res => res.json())
 .then(data => {
-  console.log(data.token)
-  // Redirige al usuario a /captcha/<token>
-  window.location.href = \`/captcha/\${data.token}\`
+  if (data.token) {
+    // Redirect the user to the captcha page
+    window.location.href = \`https://captcha.spyflow.tech/captcha/\${data.token}\`
+  }
 })
   `.trim()
 
   return (
     <>
       <Head>
-        <title>Fixnur Captcha - Documentación</title>
+        <title>Documentación del Servicio de Captcha</title>
       </Head>
       <div style={{
         padding: '2rem 4rem',
@@ -107,7 +67,7 @@ fetch('/api/captcha/generateToken', {
         <div style={{ maxWidth: 960, margin: '0 auto' }}>
           <header style={{ borderBottom: '1px solid #e0eafc', paddingBottom: '1rem', marginBottom: '2rem' }}>
             <h1 style={{ fontSize: '2.5rem', color: '#1976d2' }}>Documentación de Fixnur Captcha</h1>
-            <p style={{ fontSize: '1.1rem', color: '#555' }}>Una solución de captcha auto-alojada usando Next.js, Supabase y Google reCAPTCHA v2.</p>
+            <p style={{ fontSize: '1.1rem', color: '#555' }}>Una guía para integrar el servicio de captcha de Fixnur en tus aplicaciones.</p>
           </header>
 
           <section style={{ marginBottom: '3rem' }}>
@@ -140,82 +100,50 @@ fetch('/api/captcha/generateToken', {
           </section>
 
           <section style={{ marginBottom: '3rem' }}>
-            <h2 style={{ fontSize: '2rem', borderBottom: '1px solid #e0eafc', paddingBottom: '0.5rem', marginBottom: '1rem' }}>Visión General</h2>
-            <p>Este proyecto proporciona una forma de proteger tus formularios y acciones de bots. Funciona generando un token único, presentando al usuario un desafío de reCAPTCHA y verificando la solución tanto en el frontend como en el backend.</p>
+            <h2 style={{ fontSize: '2rem', borderBottom: '1px solid #e0eafc', paddingBottom: '0.5rem', marginBottom: '1rem' }}>Cómo Funciona</h2>
+            <p>El servicio de Captcha de Fixnur está diseñado para proteger tus aplicaciones de bots de una manera sencilla. El flujo de integración consta de dos pasos:</p>
+            <ol style={{ paddingLeft: '2rem', listStyle: 'decimal' }}>
+                <li>Tu aplicación solicita un token de captcha a nuestra API.</li>
+                <li>Rediriges al usuario a nuestra página de captcha con el token obtenido.</li>
+                <li>El usuario resuelve el captcha, y nosotros nos encargamos de la verificación.</li>
+            </ol>
+             <p>Una vez que el captcha es resuelto, el token queda marcado como verificado. Tu aplicación puede entonces consultar el estado del token si es necesario (aunque el flujo principal no lo requiere).</p>
           </section>
 
           <section style={{ marginBottom: '3rem' }}>
-            <h2 style={{ fontSize: '2rem', borderBottom: '1px solid #e0eafc', paddingBottom: '0.5rem', marginBottom: '1rem' }}>Configuración</h2>
+            <h2 style={{ fontSize: '2rem', borderBottom: '1px solid #e0eafc', paddingBottom: '0.5rem', marginBottom: '1rem' }}>Guía de Integración</h2>
 
-            <h3 style={{ fontSize: '1.5rem', color: '#1976d2', marginTop: '2rem' }}>1. Configuración de Supabase</h3>
-            <p>Necesitas un proyecto de Supabase para almacenar y gestionar los tokens de captcha. Ejecuta el siguiente script SQL en el editor de SQL de tu proyecto de Supabase para crear la tabla <code>captcha_tokens</code> y configurar las políticas de seguridad necesarias.</p>
-            <CodeBlock>{setupSql}</CodeBlock>
+            <h3 style={{ fontSize: '1.5rem', color: '#1976d2', marginTop: '2rem' }}>Paso 1: Generar un Token de Captcha</h3>
+            <p>Para iniciar el proceso, tu backend o frontend debe realizar una petición <code>POST</code> a nuestro endpoint para generar un token único.</p>
+            <p><strong>Endpoint:</strong></p>
+            <CodeBlock>POST https://captcha.spyflow.tech/api/captcha/generateToken</CodeBlock>
 
-            <h3 style={{ fontSize: '1.5rem', color: '#1976d2', marginTop: '2rem' }}>2. Variables de Entorno</h3>
-            <p>Crea un archivo <code>.env.local</code> en la raíz de tu proyecto y añade las siguientes variables:</p>
-            <CodeBlock>{`
-# URL de tu proyecto de Supabase
-NEXT_PUBLIC_SUPABASE_URL=https://<id-proyecto>.supabase.co
-
-# Clave de ROL DE SERVICIO de Supabase (¡Mantenla secreta!)
-# Usada para escribir en la base de datos desde el backend
-SUPABASE_SERVICE_ROLE_KEY=<tu-clave-de-servicio>
-
-# Clave del sitio de Google reCAPTCHA v2 (pública)
-# Se usa en el frontend para renderizar el widget
-NEXT_PUBLIC_RECAPTCHA_SITE_KEY=<tu-clave-del-sitio-recaptcha>
-
-# Clave secreta de Google reCAPTCHA v2 (¡Mantenla secreta!)
-# Usada en el backend para verificar la respuesta del usuario
-RECAPTCHA_SECRET_KEY=<tu-clave-secreta-recaptcha>
-
-# Un secreto fuerte y aleatorio para firmar cookies CSRF (¡Mantenlo secreto!)
-# Puedes generar uno con: openssl rand -hex 32
-CAPTCHA_HMAC_SECRET=<tu-secreto-hmac-aleatorio>
-
-# (Opcional) Lista de nombres de host permitidos para la verificación de reCAPTCHA, separados por comas
-# Por defecto: localhost,127.0.0.1
-CAPTCHA_ALLOWED_HOSTNAMES=tudominio.com,www.tudominio.com
-            `.trim()}</CodeBlock>
-          </section>
-
-          <section style={{ marginBottom: '3rem' }}>
-            <h2 style={{ fontSize: '2rem', borderBottom: '1px solid #e0eafc', paddingBottom: '0.5rem', marginBottom: '1rem' }}>Flujo y Uso de la API</h2>
-            <p>El proceso de captcha tiene dos pasos principales:</p>
-
-            <h3 style={{ fontSize: '1.5rem', color: '#1976d2', marginTop: '2rem' }}>Paso 1: Generar un Token</h3>
-            <p>Tu backend debe realizar una petición <code>POST</code> al endpoint <code>/api/captcha/generateToken</code>. Esto crea un nuevo registro de captcha en tu base de datos y devuelve un token.</p>
             <p><strong>Ejemplo con cURL:</strong></p>
             <CodeBlock>{curlExample}</CodeBlock>
+
             <p><strong>Ejemplo con JavaScript (fetch):</strong></p>
             <CodeBlock>{fetchExample}</CodeBlock>
-            <p>La respuesta será un JSON con el token:</p>
+
+            <p>La respuesta de la API será un objeto JSON que contiene el token:</p>
             <CodeBlock>{`
 {
-  "id": "...",
-  "token": "a1b2c3d4...",
-  "expiresAt": "..."
+  "id": "a1b2c3d4-e5f6-...",
+  "token": "abcdef123456...",
+  "expiresAt": "2024-01-01T12:15:00Z"
 }
             `.trim()}</CodeBlock>
 
-            <h3 style={{ fontSize: '1.5rem', color: '#1976d2', marginTop: '2rem' }}>Paso 2: Resolver el Captcha</h3>
-            <p>Una vez que tienes el token, redirige al usuario a la página del captcha: <code>/captcha/&lt;token&gt;</code>. Puedes pasar un mensaje de éxito opcional con el parámetro de consulta <code>successmsg</code>.</p>
-            <p>Ejemplo de URL: <code>https://&lt;tu-dominio&gt;/captcha/a1b2c3d4?successmsg=¡Gracias! Tu captcha ha sido verificado.</code></p>
-            <p>La página se encargará de mostrar el reCAPTCHA, verificarlo y marcar el token como resuelto en la base de datos.</p>
-          </section>
+            <h3 style={{ fontSize: '1.5rem', color: '#1976d2', marginTop: '2rem' }}>Paso 2: Redirigir al Usuario</h3>
+            <p>Con el <code>token</code> obtenido, redirige al usuario a la siguiente URL:</p>
+            <CodeBlock>https://captcha.spyflow.tech/captcha/&lt;TU_TOKEN_AQUI&gt;</CodeBlock>
+            <p>Por ejemplo, si tu token es <code>abcdef123456</code>, la URL sería:</p>
+            <CodeBlock>https://captcha.spyflow.tech/captcha/abcdef123456</CodeBlock>
 
-          <section>
-            <h2 style={{ fontSize: '2rem', borderBottom: '1px solid #e0eafc', paddingBottom: '0.5rem', marginBottom: '1rem' }}>Cómo Probar (Manualmente)</h2>
-            <p>Para probar tu integración manualmente, sigue estos pasos:</p>
-            <ol style={{ paddingLeft: '2rem' }}>
-              <li>Asegúrate de que tu aplicación Next.js esté corriendo (<code>npm run dev</code>).</li>
-              <li>Usa una herramienta como cURL, Postman, o el snippet de 'fetch' en la consola de tu navegador para llamar al endpoint <code>/api/captcha/generateToken</code>.</li>
-              <li>Copia el <code>token</code> de la respuesta.</li>
-              <li>En tu navegador, ve a <code>http://localhost:3000/captcha/&lt;token-copiado&gt;</code>.</li>
-              <li>Deberías ver el widget de reCAPTCHA. Resuélvelo.</li>
-              <li>Si tienes éxito, el estado en la página debería cambiar a 'solved'.</li>
-              <li>Puedes verificar en tu tabla <code>captcha_tokens</code> de Supabase que el registro correspondiente ahora tiene <code>solved</code> establecido en <code>true</code>.</li>
-            </ol>
+            <h4 style={{ fontSize: '1.2rem', color: '#1976d2', marginTop: '2rem' }}>Parámetros Opcionales</h4>
+            <p>Puedes añadir un mensaje de éxito personalizado que se mostrará al usuario después de resolver el captcha. Usa el parámetro de consulta <code>successmsg</code>.</p>
+            <p><strong>Ejemplo:</strong></p>
+            <CodeBlock>https://captcha.spyflow.tech/captcha/&lt;TU_TOKEN_AQUI&gt;?successmsg=¡Verificación completada! Ya puedes volver a la aplicación.</CodeBlock>
+             <p>Una vez el usuario resuelve el captcha en nuestra página, el proceso ha finalizado. No se requiere ninguna acción adicional por parte de tu aplicación.</p>
           </section>
 
         </div>
