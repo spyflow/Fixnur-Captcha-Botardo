@@ -170,7 +170,8 @@ export async function getServerSideProps(ctx) {
   // Check token existence via internal API
   let valid = false
   try {
-    const existUrl = `/api/captcha/exist/${encodeURIComponent(token)}`
+    // lo dejo asi por que una paja hacerlo de otra forma, xd
+    const existUrl = `https://captcha.spyflow.tech/api/captcha/exist/${encodeURIComponent(token)}`
 
     console.log('[captcha] exist check start', { token, existUrl })
     const resp = await fetch(existUrl)
