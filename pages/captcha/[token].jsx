@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 
-export default function CaptchaPage({ token, siteKey, successmsg }) {
+export default function CaptchaPage({ token, siteKey, successmsg, valid }) {
   const containerRef = useRef(null)
   const [mounted, setMounted] = useState(false)
   const [rendered, setRendered] = useState(false)
@@ -67,7 +67,12 @@ export default function CaptchaPage({ token, siteKey, successmsg }) {
 
   return (
     <main style={{ padding: 24, maxWidth: 480, margin: '0 auto', fontFamily: 'sans-serif' }}>
-      {!siteKey ? (
+      {!valid ? (
+        <>
+          <h1>Token inválido</h1>
+          <p>El token no existe o ya fue eliminado.</p>
+        </>
+      ) : !siteKey ? (
         <>
           <h1>Configuración requerida</h1>
           <p>Falta configurar NEXT_PUBLIC_RECAPTCHA_SITE_KEY en el entorno.</p>
@@ -96,8 +101,20 @@ export async function getServerSideProps(ctx) {
   const { token } = ctx.params
   const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || null
   const successmsg = typeof ctx.query.successmsg === 'string' ? ctx.query.successmsg : null
+  // Check token existence via internal API
+  let valid = false
+  try {
+    const baseUrl = process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : `http://${ctx.req.headers.host}`
+    const existUrl = `${baseUrl}/api/captcha/exist/${encodeURIComponent(token)}`
+    const resp = await fetch(existUrl)
+    valid = await resp.json()
+  } catch {
+    valid = false
+  }
   const hmacSecret = process.env.CAPTCHA_HMAC_SECRET || null
-  if (hmacSecret) {
+  if (hmacSecret && valid) {
     const ua = ctx.req.headers['user-agent'] || ''
     const { createHmac } = await import('crypto')
     const sig = createHmac('sha256', hmacSecret)
@@ -106,5 +123,5 @@ export async function getServerSideProps(ctx) {
     const cookie = `captcha_csrf=${token}.${sig}; Path=/; HttpOnly; SameSite=Lax; Max-Age=900`
     ctx.res.setHeader('Set-Cookie', cookie)
   }
-  return { props: { token, siteKey, successmsg } }
+  return { props: { token, siteKey, successmsg, valid } }
 }
