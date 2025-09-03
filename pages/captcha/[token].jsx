@@ -174,20 +174,27 @@ export async function getServerSideProps(ctx) {
       ? `https://${process.env.VERCEL_URL}`
       : `http://${ctx.req.headers.host}`
     const existUrl = `${baseUrl}/api/captcha/exist/${encodeURIComponent(token)}`
+    console.log('[captcha] exist check start', { token, existUrl })
     const resp = await fetch(existUrl)
     if (resp.ok) {
+      let parsedAs = 'unknown'
       try {
         const json = await resp.json()
         valid = json === true
+        parsedAs = 'json'
       } catch {
         const text = (await resp.text()).trim()
         valid = text === 'true'
+        parsedAs = 'text'
       }
+      console.log('[captcha] exist check result', { token, status: resp.status, parsedAs, valid })
     } else {
       valid = false
+      console.warn('[captcha] exist check non-200', { token, status: resp.status })
     }
   } catch {
     valid = false
+    console.error('[captcha] exist check error', { token })
   }
   const hmacSecret = process.env.CAPTCHA_HMAC_SECRET || null
   if (hmacSecret && valid) {
