@@ -175,7 +175,17 @@ export async function getServerSideProps(ctx) {
       : `http://${ctx.req.headers.host}`
     const existUrl = `${baseUrl}/api/captcha/exist/${encodeURIComponent(token)}`
     const resp = await fetch(existUrl)
-    valid = await resp.json()
+    if (resp.ok) {
+      try {
+        const json = await resp.json()
+        valid = json === true
+      } catch {
+        const text = (await resp.text()).trim()
+        valid = text === 'true'
+      }
+    } else {
+      valid = false
+    }
   } catch {
     valid = false
   }
