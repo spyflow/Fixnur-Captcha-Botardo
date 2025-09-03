@@ -66,34 +66,63 @@ export default function CaptchaPage({ token, siteKey, successmsg, valid }) {
   }, [mounted, siteKey, token, rendered])
 
   return (
-    <main style={{ padding: 24, maxWidth: 480, margin: '0 auto', fontFamily: 'sans-serif' }}>
-      {!valid ? (
-        <>
-          <h1>Token inválido</h1>
-          <p>El token no existe o ya fue eliminado.</p>
-        </>
-      ) : !siteKey ? (
-        <>
-          <h1>Configuración requerida</h1>
-          <p>Falta configurar NEXT_PUBLIC_RECAPTCHA_SITE_KEY en el entorno.</p>
-        </>
-      ) : (
-        <>
-          <h1>Verificación</h1>
-          <p>Completa el reCAPTCHA para continuar.</p>
-          {mounted ? (
-            <div ref={containerRef} />
-          ) : (
-            <div style={{ height: 78, background: '#fafafa', border: '1px solid #eee' }} />
-          )}
-          <p style={{ marginTop: 16 }}>
-            {successmsg
-              ? (status === 'solved' ? successmsg : ' ')
-              : <>Estado: {status}{error ? ` — ${error}` : ''}</>}
-          </p>
-        </>
-      )}
-    </main>
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: 'linear-gradient(120deg, #e0eafc 0%, #cfdef3 100%)',
+      fontFamily: 'Inter, Arial, sans-serif',
+    }}>
+      <div style={{
+        background: '#fff',
+        borderRadius: 16,
+        boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
+        padding: 32,
+        maxWidth: 400,
+        width: '100%',
+        textAlign: 'center',
+      }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 8 }}>
+          <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M24 4L40 10V22C40 33.0457 32.0457 41 24 44C15.9543 41 8 33.0457 8 22V10L24 4Z" fill="#1976d2"/>
+            <path d="M24 8V40" stroke="#fff" strokeWidth="3" strokeLinecap="round"/>
+            <circle cx="24" cy="24" r="5" fill="#fff"/>
+          </svg>
+          <h1 style={{ fontWeight: 700, fontSize: 28, margin: '8px 0 0', color: '#2a3a4b' }}>
+            Fixnur Captcha
+          </h1>
+        </div>
+        {!valid ? (
+          <>
+            <h2 style={{ color: '#d32f2f', fontSize: 20, margin: '24px 0 8px' }}>Token inválido</h2>
+            <p style={{ color: '#555', marginBottom: 0 }}>El token no existe o ya fue eliminado.</p>
+          </>
+        ) : !siteKey ? (
+          <>
+            <h2 style={{ color: '#d32f2f', fontSize: 20, margin: '24px 0 8px' }}>Configuración requerida</h2>
+            <p style={{ color: '#555', marginBottom: 0 }}>Falta configurar NEXT_PUBLIC_RECAPTCHA_SITE_KEY en el entorno.</p>
+          </>
+        ) : (
+          <>
+            <h2 style={{ fontWeight: 600, fontSize: 20, margin: '24px 0 8px', color: '#1976d2' }}>Verificación</h2>
+            <p style={{ color: '#555', marginBottom: 24 }}>Completa el reCAPTCHA para continuar.</p>
+            <div style={{ margin: '0 auto', maxWidth: 300 }}>
+              {mounted ? (
+                <div ref={containerRef} />
+              ) : (
+                <div style={{ height: 78, background: '#fafafa', border: '1px solid #eee', borderRadius: 8 }} />
+              )}
+            </div>
+            <p style={{ marginTop: 24, fontSize: 16, color: status === 'solved' ? '#388e3c' : '#555' }}>
+              {successmsg
+                ? (status === 'solved' ? successmsg : ' ')
+                : <>Estado: {status}{error ? ` — ${error}` : ''}</>}
+            </p>
+          </>
+        )}
+      </div>
+    </div>
   )
 }
 
