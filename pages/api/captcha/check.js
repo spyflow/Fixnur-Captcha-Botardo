@@ -26,7 +26,7 @@ export default async function handler(req, res) {
 		}
 
 		// If solved is true, respond false; otherwise true
-		return res.status(200).json(!Boolean(data.solved))
+		return res.status(200).json(Boolean(data.solved))
 	} catch (e) {
 		return res.status(500).json({ error: 'Server error' })
 	}
