@@ -12,10 +12,11 @@ export default async function handler(req, res) {
 	try {
 		const { data, error } = await supabase
 			.from('captcha_tokens')
-			.select('id')
+			.select('id, solved')
 			.eq('token', token)
 			.single()
-		res.status(200).json(Boolean(data && data.id))
+		// If solved is true, respond false
+		res.status(200).json(Boolean(data && data.id && !data.solved))
 	} catch (e) {
 		res.status(200).json(false)
 	}
