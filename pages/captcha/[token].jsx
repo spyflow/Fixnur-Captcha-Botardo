@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import Head from 'next/head'
 
 export default function CaptchaPage({ token, siteKey, successmsg, valid }) {
   const containerRef = useRef(null)
@@ -65,16 +66,51 @@ export default function CaptchaPage({ token, siteKey, successmsg, valid }) {
     }
   }, [mounted, siteKey, token, rendered])
 
+  // SVGs for favicon (blue for light, white for dark)
+  const faviconLight =
+    'data:image/svg+xml;utf8,' + encodeURIComponent(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+        <path d="M24 4L40 10V22C40 33.0457 32.0457 41 24 44C15.9543 41 8 33.0457 8 22V10L24 4Z" fill="#1976d2"/>
+        <path d="M24 8V40" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+        <circle cx="24" cy="24" r="5" fill="#fff"/>
+      </svg>
+    `)
+  const faviconDark =
+    'data:image/svg+xml;utf8,' + encodeURIComponent(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+        <path d="M24 4L40 10V22C40 33.0457 32.0457 41 24 44C15.9543 41 8 33.0457 8 22V10L24 4Z" fill="#fff"/>
+        <path d="M24 8V40" stroke="#1976d2" stroke-width="3" stroke-linecap="round"/>
+        <circle cx="24" cy="24" r="5" fill="#1976d2"/>
+      </svg>
+    `)
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: 'linear-gradient(120deg, #e0eafc 0%, #cfdef3 100%)',
-      fontFamily: 'Inter, Arial, sans-serif',
-    }}>
-      <div style={{
+    <>
+      <Head>
+          <title>Fixnur Captcha</title>
+          <link rel="icon" id="dynamic-favicon" href={faviconLight} />
+          <script dangerouslySetInnerHTML={{
+            __html: `
+              function setFavicon() {
+                var isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                var favicon = document.getElementById('dynamic-favicon');
+                if (favicon) {
+                  favicon.href = isDark ? '${faviconDark}' : '${faviconLight}';
+                }
+              }
+              setFavicon();
+              window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', setFavicon);
+            `
+          }} />
+        </Head>
+        <div style={{
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'linear-gradient(120deg, #e0eafc 0%, #cfdef3 100%)',
+          fontFamily: 'Inter, Arial, sans-serif',
+        }}>
+        <div style={{
         background: '#fff',
         borderRadius: 16,
         boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
@@ -122,7 +158,8 @@ export default function CaptchaPage({ token, siteKey, successmsg, valid }) {
           </>
         )}
       </div>
-    </div>
+      </div>
+    </>
   )
 }
 
