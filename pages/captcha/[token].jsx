@@ -1,17 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
 import Head from 'next/head'
 
-export default function CaptchaPage({ token, siteKey, successmsg, valid }) {
+export default function CaptchaPage({ token, siteKey, successmsg, valid, solved }) {
   const containerRef = useRef(null)
   const [mounted, setMounted] = useState(false)
   const [rendered, setRendered] = useState(false)
-  const [status, setStatus] = useState('idle')
+  const [status, setStatus] = useState(solved ? 'solved' : 'idle')
   const [error, setError] = useState(null)
 
   useEffect(() => setMounted(true), [])
 
   useEffect(() => {
-    if (!mounted || !siteKey || !containerRef.current || rendered) return
+    if (solved || !mounted || !siteKey || !containerRef.current || rendered) return
 
     const onVerify = async (recaptchaToken) => {
       setStatus('verifying')
@@ -64,7 +64,7 @@ export default function CaptchaPage({ token, siteKey, successmsg, valid }) {
         }
       }
     }
-  }, [mounted, siteKey, token, rendered])
+  }, [mounted, siteKey, token, rendered, solved])
 
   // SVGs for favicon (blue for light, white for dark)
   const faviconLight =
@@ -139,6 +139,13 @@ export default function CaptchaPage({ token, siteKey, successmsg, valid }) {
             <h2 style={{ color: '#d32f2f', fontSize: 20, margin: '24px 0 8px' }}>Configuración requerida</h2>
             <p style={{ color: '#555', marginBottom: 0 }}>Falta configurar NEXT_PUBLIC_RECAPTCHA_SITE_KEY en el entorno.</p>
           </>
+        ) : status === 'solved' ? (
+          <>
+            <h2 style={{ fontWeight: 600, fontSize: 20, margin: '24px 0 8px', color: '#388e3c' }}>Verificado</h2>
+            <p style={{ color: '#555', marginBottom: 24, fontSize: 16 }}>
+              {successmsg || 'El captcha ha sido completado.'}
+            </p>
+          </>
         ) : (
           <>
             <h2 style={{ fontWeight: 600, fontSize: 20, margin: '24px 0 8px', color: '#1976d2' }}>Verificación</h2>
@@ -169,34 +176,28 @@ export async function getServerSideProps(ctx) {
   const successmsg = typeof ctx.query.successmsg === 'string' ? ctx.query.successmsg : null
   // Check token existence via internal API
   let valid = false
+  let solved = false
   try {
     // lo dejo asi por que una paja hacerlo de otra forma, xd
-    const existUrl = `https://captcha.spyflow.tech/api/captcha/exist/${encodeURIComponent(token)}`
+    const statusUrl = `https://captcha.spyflow.tech/api/captcha/status/${encodeURIComponent(token)}`
 
-    console.log('[captcha] exist check start', { token, existUrl })
-    const resp = await fetch(existUrl)
+    console.log('[captcha] status check start', { token, statusUrl })
+    const resp = await fetch(statusUrl)
     if (resp.ok) {
-      let parsedAs = 'unknown'
-      try {
-        const json = await resp.json()
-        valid = json === true
-        parsedAs = 'json'
-      } catch {
-        const text = (await resp.text()).trim()
-        valid = text === 'true'
-        parsedAs = 'text'
-      }
-      console.log('[captcha] exist check result', { token, status: resp.status, parsedAs, valid })
+      const json = await resp.json()
+      valid = json.valid
+      solved = json.solved
+      console.log('[captcha] status check result', { token, status: resp.status, valid, solved })
     } else {
       valid = false
-      console.warn('[captcha] exist check non-200', { token, status: resp.status })
+      console.warn('[captcha] status check non-200', { token, status: resp.status })
     }
-  } catch {
+  } catch(e) {
     valid = false
-    console.error('[captcha] exist check error', { token })
+    console.error('[captcha] status check error', { token, error: e.message })
   }
   const hmacSecret = process.env.CAPTCHA_HMAC_SECRET || null
-  if (hmacSecret && valid) {
+  if (hmacSecret && valid && !solved) {
     const ua = ctx.req.headers['user-agent'] || ''
     const { createHmac } = await import('crypto')
     const sig = createHmac('sha256', hmacSecret)
@@ -205,5 +206,5 @@ export async function getServerSideProps(ctx) {
     const cookie = `captcha_csrf=${token}.${sig}; Path=/; HttpOnly; SameSite=Lax; Max-Age=900`
     ctx.res.setHeader('Set-Cookie', cookie)
   }
-  return { props: { token, siteKey, successmsg, valid } }
+  return { props: { token, siteKey, successmsg, valid, solved } }
 }
