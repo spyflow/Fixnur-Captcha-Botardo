@@ -33,6 +33,7 @@ export default async function handler(req, res) {
 			token,
 			ip_address: ip,
 			user_agent: userAgent,
+			isUsed: false,
 			// expires_at, // uncomment if you want the API to set it explicitly
 		}
 
